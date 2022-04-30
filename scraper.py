@@ -1,7 +1,9 @@
 import parse_classes as pc
 
 
-parserResidencias = pc.inforesidencias()
-resis = parserResidencias.get_residencies()
+pr = pc.inforesidencias()
+# resis = pr.get_residencies()
 
-print(resis)
+singleRes = pr.get_residence_data({'name':'testres', 
+                                   'url':'https://www.inforesidencias.com/centros/residencia/2322/centres-geriatrics-malgrat'})
+print(singleRes)
