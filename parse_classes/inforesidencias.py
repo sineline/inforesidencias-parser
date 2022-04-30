@@ -9,14 +9,13 @@ import itertools
 
 
 class inforesidencias:
-    def __init__(self, region: str = "catalunya", provincia: str = '', comarca: str = '', poblacion: str = '') -> None:
+    def __init__(self, region: str = "catalunya", provincia: str = '', comarca: str = '') -> None:
         """ Clase para obtener datos de residencia de inforesidencias.es
 
         Args:
-            region (str, optional): _description_. Defaults to "catalunya".
-            provincia (str, optional): _description_. Defaults to ''.
-            comarca (str, optional): _description_. Defaults to ''.
-            poblacion (str, optional): _description_. Defaults to ''.
+            region (str, optional): Region de busqueda. Defaults to "catalunya".
+            provincia (str, optional): Provincia de busqueda. Defaults to ''.
+            comarca (str, optional): Comarca de busqueda. Defaults to ''.
         """ 
              
         self._BASE_URL = "https://www.inforesidencias.com"
@@ -34,7 +33,7 @@ class inforesidencias:
             "filtroBuscador.comunidad": region,
             "filtroBuscador.provincia": provincia,
             "filtroBuscador.comarca": comarca,
-            "filtroBuscador.poblacion": poblacion,
+            "filtroBuscador.poblacion": "",
             "filtroBuscador.precioMaximo": "",
             "filtroBuscador.genero": "",
             "filtroBuscador.ratioMinimoPersonalResidentes": "",
