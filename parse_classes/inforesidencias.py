@@ -65,5 +65,5 @@ class inforesidencias:
         
         residencies = Parallel(n_jobs=50)(delayed(self.get_paginated_page)(page) for page in range(1, self.totalPages))  # n_jobs = number of processes
 
-        self.residencies = list(itertools.chain.from_iterable(residencies)))    
+        self.residencies = list(itertools.chain.from_iterable(residencies))   
         return self.residencies
