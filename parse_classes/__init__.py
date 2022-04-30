@@ -1,0 +1,1 @@
+from .inforesidencias import inforesidencias
