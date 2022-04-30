@@ -9,8 +9,16 @@ import itertools
 
 
 class inforesidencias:
-    def __init__(self, region: str = "catalunya") -> None:
+    def __init__(self, region: str = "catalunya", provincia: str = '', comarca: str = '', poblacion: str = '') -> None:
+        """ Clase para obtener datos de residencia de inforesidencias.es
 
+        Args:
+            region (str, optional): _description_. Defaults to "catalunya".
+            provincia (str, optional): _description_. Defaults to ''.
+            comarca (str, optional): _description_. Defaults to ''.
+            poblacion (str, optional): _description_. Defaults to ''.
+        """ 
+             
         self._BASE_URL = "https://www.inforesidencias.com"
         self._REQUEST_URL = self._BASE_URL + "/centros/buscador/residencias/"
         self.region = region
@@ -24,9 +32,9 @@ class inforesidencias:
             "filtroBuscador.textoLibre": "",
             "filtroBuscador.tipologia": 1,
             "filtroBuscador.comunidad": region,
-            "filtroBuscador.provincia": "",
-            "filtroBuscador.comarca": "",
-            "filtroBuscador.poblacion": "",
+            "filtroBuscador.provincia": provincia,
+            "filtroBuscador.comarca": comarca,
+            "filtroBuscador.poblacion": poblacion,
             "filtroBuscador.precioMaximo": "",
             "filtroBuscador.genero": "",
             "filtroBuscador.ratioMinimoPersonalResidentes": "",
@@ -37,10 +45,25 @@ class inforesidencias:
         pass
 
     def get_residence_web(self, resid):
+        """ Obtiene la web de la residencia
+        Args:
+            resid (_type_): id interna de la residencia
+
+        Returns:
+            _type_: web de la residencia
+        """        
         req_url = self._BASE_URL + '/centros/datos-ajax/' + resid + '/web'
         return requests.get(req_url).text
 
     def get_residence_basic_data(self, html) -> dict:
+        """ Obtiene los datos básicos de la residencia
+
+        Args:
+            html (_type_): html de la pagina de la residencia
+
+        Returns:
+            dict: diccionario con los datos básicos de la residencia
+        """        
         # basic data
         # nombre, direccion, geoloc, telf, web
         jsons = html.findAll('script', type='application/ld+json')
@@ -65,6 +88,14 @@ class inforesidencias:
         return residence_json
 
     def get_quality_data(self, html) -> dict:
+        """ Obtiene los datos de calidad de la residencia
+
+        Args:
+            html (_type_): html de la pagina de la residencia
+
+        Returns:
+            dict: dict con los datos de calidad de la residencia
+        """        
         # quality data
         # ratio profs / 10 usuaris, transparencia
         data = dict()
@@ -79,6 +110,14 @@ class inforesidencias:
         return data
 
     def get_facilities_data(self, html) -> dict:
+        """ Obtiene los datos de las instalaciones de la residencia
+
+        Args:
+            html (_type_): html de la pagina de la residencia
+
+        Returns:
+            dict: dict con los datos de las instalaciones de la residencia
+        """        
         # places totals, m2 per usuari, tipo de residencia (jardin, etc)
         # piscina, cocina, zona verde, transport public, parking, unidad de demencia
         data = dict()
@@ -100,6 +139,14 @@ class inforesidencias:
         return data
 
     def get_financiacio_data(self, html) -> dict:
+        """ Obtiene los datos de financiación de la residencia
+
+        Args:
+            html (_type_): html de la pagina de la residencia
+
+        Returns:
+            dict: dict con los datos de financiación de la residencia
+        """        
         # financiacio
         # preu habitacions desde, financiacio publica hombre, financiacio publica mujer, individual con baño,
         # individual sin baño, compartida hombre con baño, compartida mujer con baño, comartida hombre sin baño,
@@ -125,6 +172,14 @@ class inforesidencias:
         return data
 
     def get_admissions_data(self, html) -> dict:
+        """ Obtiene los datos de admisión de la residencia
+
+        Args:
+            html (_type_): html de la pagina de la residencia
+
+        Returns:
+            dict: dict con los datos de admisión de la residencia
+        """        
         # admissions
         # admissions persona encamada, admissions persona silla ruedas, admission demencias
         data = dict()
@@ -137,6 +192,14 @@ class inforesidencias:
         return data
 
     def get_servicios_data(self, html) -> dict:
+        """ Obtiene los datos de servicios de la residencia
+
+        Args:
+            html (_type_): html de la pagina de la residencia
+
+        Returns:
+            dict: dict con los datos de servicios de la residencia
+        """        
         # servicios
         # peluqueria, podologia, acompañamiento, rehabilitacion, eleccion menu, productos higiene, informes de salud
         data = dict()
@@ -148,6 +211,14 @@ class inforesidencias:
         return data
 
     def get_professionales_data(self, html) -> dict:
+        """ Obtiene los datos de los profesionales de la residencia
+
+        Args:
+            html (_type_): html de la pagina de la residencia
+
+        Returns:
+            dict: dict con los datos de los profesionales de la residencia
+        """        
         # professionales
         # Médico, Enfermera, Fisioterapeuta, Terapeuta ocupacional, Psicólogo,
         # Trabajador Social, Educador Social, Animador Sociocultural,
@@ -163,6 +234,14 @@ class inforesidencias:
         return data
 
     def get_institucional_data(self, html) -> dict:
+        """ Obtiene los datos de la institucional de la residencia
+
+        Args:
+            html (_type_): html de la pagina de la residencia
+
+        Returns:
+            dict: dict con los datos de la institucional de la residencia
+        """        
         # institucional
         # Titulo director, modelo contrato residente, reglamento de regimen interior,
         # horario de vida, organigrama, ultima inspeccion Serv. Socials, ultina inspeccion sanidad
@@ -183,6 +262,14 @@ class inforesidencias:
         return data
 
     def get_certificaciones_data(self, html) -> dict:
+        """ Obtiene los datos de las certificaciones de la residencia
+
+        Args:
+            html (_type_): html de la pagina de la residencia
+
+        Returns:
+            dict: dict con los datos de las certificaciones de la residencia
+        """        
         # certificaciones
         # Acreditado ley dependencia, certificado calidad,
         # politica de uso de contenciones, comite de etica, otras certificaciones
@@ -200,7 +287,14 @@ class inforesidencias:
         return data
 
     def get_residence_data(self, residence: dict) -> dict:
+        """ Obtiene los datos de la residencia
 
+        Args:
+            residence (dict): dict con el nombre y la url de la residencia en inforesidencias.com
+
+        Returns:
+            dict: dict con los datos parseados de la residencia
+        """        
         residence_page = self.session.get(residence.get('url'))
         html = BeautifulSoup(residence_page.content, "html.parser")
 
@@ -234,6 +328,14 @@ class inforesidencias:
         return pd.Series(residence)
 
     def get_paginated_page(self, page_number: int) -> BeautifulSoup:
+        """ Obtiene las urls de las residencias de la pagina indicada
+
+        Args:
+            page_number (int): numero de la pagina de la busqueda residencias
+
+        Returns:
+            BeautifulSoup: html de la pagina de la busqueda residencias
+        """        
         print(f"Page {page_number}")
         params = self.params.copy()
         params.update({"paginaActual": page_number})
@@ -249,8 +351,12 @@ class inforesidencias:
                                    for page in items)
         return data
 
-    def get_residencies(self) -> list:
+    def get_residencies(self) -> pd.DataFrame:
+        """ Obtiene los datos de la busqueda de residencias
 
+        Returns:
+            DataFrame: DataFrame con los datos de la busqueda de residencias
+        """        
         try:
             firstPage = self.session.post(self._REQUEST_URL, data=self.params)
         except:
