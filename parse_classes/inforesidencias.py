@@ -46,7 +46,7 @@ class inforesidencias:
         jsons = html.findAll('script', type='application/ld+json')
         residence_json = json.loads(jsons[0].text)
 
-        res_keys_to_remove = ['@context', '@type',
+        res_keys_to_remove = ['@context', '@type', 'url',
                               'description', 'image', 'name']
 
         keys = list(residence_json.keys())
@@ -205,33 +205,33 @@ class inforesidencias:
         html = BeautifulSoup(residence_page.content, "html.parser")
 
         # basic data
-        residence.update(self.get_residence_basic_data(html))
+        residence['dades_basiques'] = self.get_residence_basic_data(html)
 
         # Quality data
-        residence.update(self.get_quality_data(html))
+        residence['qualitat'] = self.get_quality_data(html)
 
         # Instalaciones
-        residence.update(self.get_facilities_data(html))
+        residence['instalacions'] = self.get_facilities_data(html)
 
         # financiacio
-        residence.update(self.get_financiacio_data(html))
+        residence['financiacio'] = self.get_financiacio_data(html)
 
         # admissions
-        residence.update(self.get_admissions_data(html))
+        residence['admissions'] = self.get_admissions_data(html)
 
         # serveis
-        residence.update(self.get_servicios_data(html))
+        residence['serveis'] = self.get_servicios_data(html)
 
         # professionales
-        residence.update(self.get_professionales_data(html))
+        residence['professionals'] = self.get_professionales_data(html)
 
         # datos institucion & documentacion
-        residence.update(self.get_institucional_data(html))
+        residence['institucional'] = self.get_institucional_data(html)
 
         # certificaciones
-        residence.update(self.get_certificaciones_data(html))
+        residence['certificacions'] = self.get_certificaciones_data(html)
 
-        return residence
+        return pd.Series(residence)
 
     def get_paginated_page(self, page_number: int) -> BeautifulSoup:
         print(f"Page {page_number}")
