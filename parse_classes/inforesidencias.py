@@ -1,5 +1,3 @@
-from audioop import ratecv
-import tty
 import pandas as pd
 import requests
 import re
