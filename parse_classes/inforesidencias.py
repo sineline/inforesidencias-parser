@@ -10,13 +10,14 @@ import itertools
 
 
 class inforesidencias:
-    def __init__(self, region: str = "catalunya", provincia: str = '', comarca: str = '') -> None:
+    def __init__(self, region: str = "catalunya", provincia: str = '', comarca: str = '', flatten='tabulated') -> None:
         """ Clase para obtener datos de residencia de inforesidencias.es
 
         Args:
             region (str, optional): Region de busqueda. Defaults to "catalunya".
             provincia (str, optional): Provincia de busqueda. Defaults to ''.
             comarca (str, optional): Comarca de busqueda. Defaults to ''.
+            flatten (str: optional): {'normalized', 'tabulated'} Defaults to 'tabulated'. If 'normalized', returns a flattened Dataframe. If 'tabulated', returns a tabulated Dataframe.
         """
 
         self._BASE_URL = "https://www.inforesidencias.com"
@@ -25,7 +26,7 @@ class inforesidencias:
         self.totalPages = int()
         self.residencies = list()
         self.session = requests.Session()
-
+        self.flatten = flatten
         self.params = {
             "paginaActual": 1,
             "filtroBuscador.grupo": "",
@@ -432,19 +433,29 @@ class inforesidencias:
             firstPage = self.session.post(self._REQUEST_URL, data=self.params)
         except:
             return {'status_code': firstPage.status_code, 'message': firstPage.error_message}
-        
+
         resultregex = r"(\d+(?=\sresultados))"
         parsedPages = re.findall(resultregex, firstPage.text)[0]
         self.totalPages = 1 + (int(parsedPages) // 10)
 
         print(f"Total pages: {self.totalPages}")
 
-        residencies = Parallel(n_jobs=6)(delayed(self.get_paginated_page)(
+        residencies = Parallel(n_jobs=1)(delayed(self.get_paginated_page)(
             page) for page in range(1, self.totalPages))
 
         joined_residencies = list(itertools.chain.from_iterable(residencies))
-        normalized_residencies = pd.json_normalize(joined_residencies).set_index(['name', 'url'])
-        normalized_residencies.columns=normalized_residencies.columns.str.split(".",expand=True)
-        self.residencies = normalized_residencies
-        
+        if self.output == 'normalized':
+            normalized_residencies = pd.json_normalize(
+                joined_residencies).set_index(['name'])
+            normalized_residencies.columns = normalized_residencies.columns.str.split(
+                ".", expand=True)
+            self.residencies = normalized_residencies
+        elif self.output == 'tabulated':
+            residencies = pd.json_normalize(
+                joined_residencies).set_index('name').stack()
+            self.residencies = residencies.to_frame().reset_index().set_index('name')
+            self.residencies.columns(['category', 'value'])
+
+        # .to_csv('residencies.csv', encoding='utf-8-sig')
+
         return self.residencies
