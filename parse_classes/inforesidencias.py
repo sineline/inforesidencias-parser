@@ -30,6 +30,7 @@ class inforesidencias:
         self.residencies = list()
         self.session = requests.Session()
         self.flatten = flatten
+        self.output = output
         self.params = {
             "paginaActual": 1,
             "filtroBuscador.grupo": "",
