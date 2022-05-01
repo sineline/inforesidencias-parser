@@ -463,7 +463,7 @@ class inforesidencias:
             residencies = pd.json_normalize(
                 joined_residencies).set_index('name').stack()
             self.residencies = residencies.to_frame().reset_index().set_index('name')
-            self.residencies.columns(['category', 'value'])
+            self.residencies.columns = ['datapoint', 'value']
         elif self.output == 'raw':
             self.residencies = joined_residencies
             
