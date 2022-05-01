@@ -8,29 +8,34 @@ import itertools
 
 
 class inforesidencias:
-    def __init__(self, region: str = "catalunya", provincia: str = '', comarca: str = '', flatten='tabulated', output=None) -> None:
+    def __init__(self, region: str = "catalunya", provincia: str = '', comarca: str = '', output='tabulated', filename=None) -> None:
         """ Clase para obtener datos de residencia de inforesidencias.es
 
         Args:
             region (str, optional): Region de busqueda. Defaults to "catalunya".
             provincia (str, optional): Provincia de busqueda. Defaults to ''.
             comarca (str, optional): Comarca de busqueda. Defaults to ''.
-            flatten (str: optional) {'normalized', 'tabulated', 'raw'}: 
+            output (str: optional) {'normalized', 'tabulated', 'raw'}: 
                     Defaults to 'tabulated'. 
                     If 'normalized', returns a flattened Dataframe. 
                     If 'tabulated', returns a tabulated Dataframe. 
                     If 'raw', returns a raw dict.
-            output (str, optional): Nombre del fichero de salida. Defaults to None. If None, returns a Dataframe.
+            filename (str, optional): Nombre del fichero de salida. Defaults to None. If None, returns a Dataframe.
         """
-
+        if output not in ['normalized', 'tabulated', 'raw']:
+            raise ValueError('output must be one of "normalized", "tabulated", "raw"')
+        
+        if type(filename) not in [str, None]:
+            raise ValueError('output must be None or a string')
+        
         self._BASE_URL = "https://www.inforesidencias.com"
         self._REQUEST_URL = self._BASE_URL + "/centros/buscador/residencias/"
         self.region = region
         self.totalPages = int()
         self.residencies = list()
         self.session = requests.Session()
-        self.flatten = flatten
         self.output = output
+        self.filename = filename
         self.params = {
             "paginaActual": 1,
             "filtroBuscador.grupo": "",
@@ -444,7 +449,7 @@ class inforesidencias:
 
         print(f"Total pages: {self.totalPages}")
 
-        residencies = Parallel(n_jobs=3)(delayed(self.get_paginated_page)(
+        residencies = Parallel(n_jobs=20)(delayed(self.get_paginated_page)(
             page) for page in range(1, self.totalPages))
 
         joined_residencies = list(itertools.chain.from_iterable(residencies))
@@ -462,8 +467,8 @@ class inforesidencias:
         elif self.output == 'raw':
             self.residencies = joined_residencies
             
-        if self.output is not None:
-            filename = f"{self.output}.csv"
+        if self.filename is not None:
+            filename = f"{self.filename}.csv"
             self.residencies.to_csv(filename, encoding='utf-8-sig')
 
         return self.residencies
