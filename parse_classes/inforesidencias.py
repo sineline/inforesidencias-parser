@@ -10,7 +10,7 @@ import itertools
 
 
 class inforesidencias:
-    def __init__(self, region: str = "catalunya", provincia: str = '', comarca: str = '', flatten='tabulated') -> None:
+    def __init__(self, region: str = "catalunya", provincia: str = '', comarca: str = '', flatten='tabulated', output=None) -> None:
         """ Clase para obtener datos de residencia de inforesidencias.es
 
         Args:
@@ -18,6 +18,7 @@ class inforesidencias:
             provincia (str, optional): Provincia de busqueda. Defaults to ''.
             comarca (str, optional): Comarca de busqueda. Defaults to ''.
             flatten (str: optional): {'normalized', 'tabulated'} Defaults to 'tabulated'. If 'normalized', returns a flattened Dataframe. If 'tabulated', returns a tabulated Dataframe.
+            output (str, optional): Nombre del fichero de salida. Defaults to None. If None, returns a Dataframe.
         """
 
         self._BASE_URL = "https://www.inforesidencias.com"
@@ -456,6 +457,8 @@ class inforesidencias:
             self.residencies = residencies.to_frame().reset_index().set_index('name')
             self.residencies.columns(['category', 'value'])
 
-        # .to_csv('residencies.csv', encoding='utf-8-sig')
+        if self.output is not None:
+            filename = f"{self.output}.csv"
+            self.residencies.to_csv(filename, encoding='utf-8-sig')
 
         return self.residencies
