@@ -443,7 +443,7 @@ class inforesidencias:
 
         print(f"Total pages: {self.totalPages}")
 
-        residencies = Parallel(n_jobs=1)(delayed(self.get_paginated_page)(
+        residencies = Parallel(n_jobs=3)(delayed(self.get_paginated_page)(
             page) for page in range(1, self.totalPages))
 
         joined_residencies = list(itertools.chain.from_iterable(residencies))
