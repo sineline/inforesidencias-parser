@@ -1,4 +1,5 @@
 from audioop import ratecv
+import tty
 import pandas as pd
 import requests
 import re
@@ -16,8 +17,8 @@ class inforesidencias:
             region (str, optional): Region de busqueda. Defaults to "catalunya".
             provincia (str, optional): Provincia de busqueda. Defaults to ''.
             comarca (str, optional): Comarca de busqueda. Defaults to ''.
-        """ 
-             
+        """
+
         self._BASE_URL = "https://www.inforesidencias.com"
         self._REQUEST_URL = self._BASE_URL + "/centros/buscador/residencias/"
         self.region = region
@@ -50,7 +51,7 @@ class inforesidencias:
 
         Returns:
             _type_: web de la residencia
-        """        
+        """
         req_url = self._BASE_URL + '/centros/datos-ajax/' + resid + '/web'
         return requests.get(req_url).text
 
@@ -62,7 +63,7 @@ class inforesidencias:
 
         Returns:
             dict: diccionario con los datos básicos de la residencia
-        """        
+        """
         # basic data
         # nombre, direccion, geoloc, telf, web
         jsons = html.findAll('script', type='application/ld+json')
@@ -94,7 +95,7 @@ class inforesidencias:
 
         Returns:
             dict: dict con los datos de calidad de la residencia
-        """        
+        """
         # quality data
         # ratio profs / 10 usuaris, transparencia
         data = dict()
@@ -104,7 +105,7 @@ class inforesidencias:
         data['ratio_profs_usuaris'] = float(ratio.text.replace(",", "."))
 
         # transparencia
-        transp = html.find('div', class_='row values').findAll('span')[2].text
+        transp = html.find('div', class_='row values').findAll('span')[-1].text
         data['pct_transparencia'] = float(transp.replace("%", ""))
         return data
 
@@ -116,16 +117,29 @@ class inforesidencias:
 
         Returns:
             dict: dict con los datos de las instalaciones de la residencia
-        """        
+        """
         # places totals, m2 per usuari, tipo de residencia (jardin, etc)
         # piscina, cocina, zona verde, transport public, parking, unidad de demencia
         data = dict()
 
         space = html.find('div', id='card-facilities-space')
-        data['plazas'] = int(space.findAll('p')[0].text)
-        data['m2_usuari'] = float(space.findAll('p')[2].text.replace("m2", ""))
-        data['m2_totales'] = data['plazas'] * data['m2_usuari']
+        rawspacetext = space.text.strip().replace('\n', ' ')
+        
+        try:
+            data['plazas'] = re.findall(r'\d+(?!plazas)', rawspacetext)[0]
+        except:
+            data['plazas'] = None
 
+        try:
+            data['m2_usuari'] = re.findall(r'\d+(?=m2)', rawspacetext)[0]
+        except:
+            data['m2_usuari'] = None
+        
+        try:
+            data['m2_totales'] = data['plazas'] * data['m2_usuari'] 
+        except:
+            data['m2_totales'] = None
+        
         tipo_res = html.find('img', {'alt': 'tipo de residencia'}).parent
 
         data['tipo_residencia'] = tipo_res.text.strip()
@@ -145,7 +159,7 @@ class inforesidencias:
 
         Returns:
             dict: dict con los datos de financiación de la residencia
-        """        
+        """
         # financiacio
         # preu habitacions desde, financiacio publica hombre, financiacio publica mujer, individual con baño,
         # individual sin baño, compartida hombre con baño, compartida mujer con baño, comartida hombre sin baño,
@@ -155,13 +169,13 @@ class inforesidencias:
         rooms_data = rooms.findAll('div', recursive=False)
         for item in rooms_data:
             cat = item.find('img')['alt']
-            aval = not item.find('div', class_='h5').find('img')
+            aval = bool(re.match(r'\d+[,.]?\d+', item.text))
             price = item.find(class_='h5').text.strip() if aval else None
             price = price.replace("€", "") if isinstance(price, str) else None
             data[cat] = float(price.replace('.', '')) if aval else None
 
-        data['Precio_desde'] = min(i for i in data.values() if i is not None)
-
+        data['Precio_desde'] = min(set(data.values())) if data else None
+        
         finan = html.find(id='card-financing').findAll('i')
         data[finan[0].parent.text.strip()] = 'text-success' in finan[0]['class']
         data[finan[1].parent.text.strip()] = 'text-success' in finan[1]['class']
@@ -178,7 +192,7 @@ class inforesidencias:
 
         Returns:
             dict: dict con los datos de admisión de la residencia
-        """        
+        """
         # admissions
         # admissions persona encamada, admissions persona silla ruedas, admission demencias
         data = dict()
@@ -198,7 +212,7 @@ class inforesidencias:
 
         Returns:
             dict: dict con los datos de servicios de la residencia
-        """        
+        """
         # servicios
         # peluqueria, podologia, acompañamiento, rehabilitacion, eleccion menu, productos higiene, informes de salud
         data = dict()
@@ -217,7 +231,7 @@ class inforesidencias:
 
         Returns:
             dict: dict con los datos de los profesionales de la residencia
-        """        
+        """
         # professionales
         # Médico, Enfermera, Fisioterapeuta, Terapeuta ocupacional, Psicólogo,
         # Trabajador Social, Educador Social, Animador Sociocultural,
@@ -240,23 +254,37 @@ class inforesidencias:
 
         Returns:
             dict: dict con los datos de la institucional de la residencia
-        """        
+        """
         # institucional
         # Titulo director, modelo contrato residente, reglamento de regimen interior,
         # horario de vida, organigrama, ultima inspeccion Serv. Socials, ultina inspeccion sanidad
 
         data = dict()
-        titulo_dr = html.find(text='Titulación del/la director/a').find_next()
-        data['titulacion director'] = titulo_dr.text.strip()
+        try:
+            titulo_dr = html.find(
+                text='Titulación del/la director/a').find_next()
+            data['titulacion director'] = titulo_dr.text.strip()
+        except:
+            data['titulacion director'] = 'No data'
 
-        docs = html.find(id='card-documentation').findAll('dt')
-        fechas = html.find(id='card-documentation').findAll('dd')
+        try:
+            docs = html.find(id='card-documentation').findAll('dt')
+            fechas = html.find(id='card-documentation').findAll('dd')
 
-        for item in zip(docs, fechas):
-            key = item[0].text.strip()
-            link = self._BASE_URL+item[0].find('a')['href']
-            fecha = item[1].text.strip()
-            data[key] = {'link': link, 'fecha': fecha}
+            for item in zip(docs, fechas):
+                key = item[0].text.strip()
+                link = self._BASE_URL+item[0].find('a')['href']
+                fecha = item[1].text.strip()
+                data[key] = {'link': link, 'fecha': fecha}
+        except:
+            data["Modelo de contrato de residente"] = 'No data'
+            data["Reglamento de régimen interior"] = 'No data'
+            data["Horario de vida"] = 'No data'
+            data["Organigrama"] = 'No data'
+            data["Última inspección Servicios Sociales"] = 'No data'
+            data["Última inspección Sanidad"] = 'No data'
+
+            pass
 
         return data
 
@@ -268,7 +296,7 @@ class inforesidencias:
 
         Returns:
             dict: dict con los datos de las certificaciones de la residencia
-        """        
+        """
         # certificaciones
         # Acreditado ley dependencia, certificado calidad,
         # politica de uso de contenciones, comite de etica, otras certificaciones
@@ -293,7 +321,7 @@ class inforesidencias:
 
         Returns:
             dict: dict con los datos parseados de la residencia
-        """        
+        """
         residence_page = self.session.get(residence.get('url'))
         html = BeautifulSoup(residence_page.content, "html.parser")
 
@@ -301,65 +329,65 @@ class inforesidencias:
         try:
             residence['dades_basiques'] = self.get_residence_basic_data(html)
         except Exception as e:
-            print(e)
+            print("Basic data: {}".format(e))
             residence['dades_basiques'] = None
-            
+
         # Quality data
         try:
             residence['qualitat'] = self.get_quality_data(html)
         except Exception as e:
-            print(e)
+            print("Quality data: {}".format(e))
             residence['qualitat'] = None
-            
+
         # Instalaciones
         try:
-           residence['instalacions'] = self.get_facilities_data(html)
+            residence['instalacions'] = self.get_facilities_data(html)
         except Exception as e:
-            print(e)
+            print("Facilities data: {}".format(e))
             residence['instalacions'] = None
-            
+
         # financiacio
         try:
             residence['financiacio'] = self.get_financiacio_data(html)
         except Exception as e:
-            print(e)
+            print("Financiacio data: {}".format(e))
             residence['financiacio'] = None
-            
+
         # admissions
         try:
             residence['admissions'] = self.get_admissions_data(html)
         except Exception as e:
-            print(e)
+            print("Admissions data: {}".format(e))
             residence['admissions'] = None
-            
+
         # serveis
         try:
             residence['serveis'] = self.get_servicios_data(html)
         except Exception as e:
-            print(e)
+            print("Services data: {}".format(e))
             residence['serveis'] = None
-            
+
         # professionales
         try:
             residence['professionals'] = self.get_professionales_data(html)
         except Exception as e:
-            print(e)
-            residence['professionals'] = None 
-            
+            print("Professionales data: {}".format(e))
+            residence['professionals'] = None
+
         # datos institucion & documentacion
         try:
             residence['institucional'] = self.get_institucional_data(html)
         except Exception as e:
-            print(e)
+            print("Institucional data: {}".format(e))
             residence['institucional'] = None
-            
+
         # certificaciones
         try:
             residence['certificacions'] = self.get_certificaciones_data(html)
         except Exception as e:
-            print(e)
+            print("Certificacions data: {}".format(e))
             residence['certificacions'] = None
-            
+
         return residence
 
     def get_paginated_page(self, page_number: int) -> BeautifulSoup:
@@ -370,7 +398,7 @@ class inforesidencias:
 
         Returns:
             BeautifulSoup: html de la pagina de la busqueda residencias
-        """        
+        """
         print(f"Page {page_number}")
         params = self.params.copy()
         params.update({"paginaActual": page_number})
@@ -391,7 +419,7 @@ class inforesidencias:
 
         Returns:
             DataFrame: DataFrame con los datos de la busqueda de residencias
-        """        
+        """
         try:
             firstPage = self.session.post(self._REQUEST_URL, data=self.params)
         except:
@@ -406,4 +434,4 @@ class inforesidencias:
             page) for page in range(1, self.totalPages))
 
         self.residencies = list(itertools.chain.from_iterable(residencies))
-        return  self.residencies 
+        return self.residencies
