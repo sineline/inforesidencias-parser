@@ -17,7 +17,11 @@ class inforesidencias:
             region (str, optional): Region de busqueda. Defaults to "catalunya".
             provincia (str, optional): Provincia de busqueda. Defaults to ''.
             comarca (str, optional): Comarca de busqueda. Defaults to ''.
-            flatten (str: optional): {'normalized', 'tabulated'} Defaults to 'tabulated'. If 'normalized', returns a flattened Dataframe. If 'tabulated', returns a tabulated Dataframe.
+            flatten (str: optional) {'normalized', 'tabulated', 'raw'}: 
+                    Defaults to 'tabulated'. 
+                    If 'normalized', returns a flattened Dataframe. 
+                    If 'tabulated', returns a tabulated Dataframe. 
+                    If 'raw', returns a raw dict.
             output (str, optional): Nombre del fichero de salida. Defaults to None. If None, returns a Dataframe.
         """
 
@@ -456,7 +460,9 @@ class inforesidencias:
                 joined_residencies).set_index('name').stack()
             self.residencies = residencies.to_frame().reset_index().set_index('name')
             self.residencies.columns(['category', 'value'])
-
+        elif self.output == 'raw':
+            self.residencies = joined_residencies
+            
         if self.output is not None:
             filename = f"{self.output}.csv"
             self.residencies.to_csv(filename, encoding='utf-8-sig')
