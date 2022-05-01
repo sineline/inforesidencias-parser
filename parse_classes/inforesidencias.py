@@ -85,6 +85,7 @@ class inforesidencias:
         internalId = link['data-id-centro']
         residence_json['infores_id'] = internalId
         residence_json['web_centre'] = self.get_residence_web(internalId)
+
         return residence_json
 
     def get_quality_data(self, html) -> dict:
@@ -102,7 +103,10 @@ class inforesidencias:
 
         # ratio profs / 10 usuaris
         ratio = html.findAll('div', class_='residents-info')[0].find('span')
-        data['ratio_profs_usuaris'] = float(ratio.text.replace(",", "."))
+        try:
+            data['ratio_profs_usuaris'] = float(ratio.text.replace(",", "."))
+        except:
+            data['ratio_profs_usuaris'] = "None"
 
         # transparencia
         transp = html.find('div', class_='row values').findAll('span')[-1].text
@@ -124,7 +128,7 @@ class inforesidencias:
 
         space = html.find('div', id='card-facilities-space')
         rawspacetext = space.text.strip().replace('\n', ' ')
-        
+
         try:
             data['plazas'] = re.findall(r'\d+(?!plazas)', rawspacetext)[0]
         except:
@@ -134,12 +138,12 @@ class inforesidencias:
             data['m2_usuari'] = re.findall(r'\d+(?=m2)', rawspacetext)[0]
         except:
             data['m2_usuari'] = None
-        
+
         try:
-            data['m2_totales'] = data['plazas'] * data['m2_usuari'] 
+            data['m2_totales'] = data['plazas'] * data['m2_usuari']
         except:
             data['m2_totales'] = None
-        
+
         tipo_res = html.find('img', {'alt': 'tipo de residencia'}).parent
 
         data['tipo_residencia'] = tipo_res.text.strip()
@@ -175,13 +179,16 @@ class inforesidencias:
             data[cat] = float(price.replace('.', '')) if aval else None
 
         data['Precio_desde'] = min(set(data.values())) if data else None
-        
+
         finan = html.find(id='card-financing').findAll('i')
         data[finan[0].parent.text.strip()] = 'text-success' in finan[0]['class']
         data[finan[1].parent.text.strip()] = 'text-success' in finan[1]['class']
+        try:
+            sistema_precios = html.find(text='Sistemas de precios').find_next()
+            data['sistema_precios'] = sistema_precios.text.strip()
+        except:
+            data['sistema_precios'] = None
 
-        sistema_precios = html.find(text='Sistemas de precios').find_next()
-        data['sistema_precios'] = sistema_precios.text.strip()
         return data
 
     def get_admissions_data(self, html) -> dict:
@@ -330,63 +337,64 @@ class inforesidencias:
             residence['dades_basiques'] = self.get_residence_basic_data(html)
         except Exception as e:
             print("Basic data: {}".format(e))
-            residence['dades_basiques'] = None
+            residence['dades_basiques'] = {}
 
         # Quality data
         try:
             residence['qualitat'] = self.get_quality_data(html)
         except Exception as e:
             print("Quality data: {}".format(e))
-            residence['qualitat'] = None
+            residence['qualitat'] = {}
+            # {'ratio_profs_usuaris': "No data", 'pct_transparencia': 'No data'},
 
         # Instalaciones
         try:
             residence['instalacions'] = self.get_facilities_data(html)
         except Exception as e:
             print("Facilities data: {}".format(e))
-            residence['instalacions'] = None
+            residence['instalacions'] = {}
 
         # financiacio
         try:
             residence['financiacio'] = self.get_financiacio_data(html)
         except Exception as e:
             print("Financiacio data: {}".format(e))
-            residence['financiacio'] = None
+            residence['financiacio'] = {}
 
         # admissions
         try:
             residence['admissions'] = self.get_admissions_data(html)
         except Exception as e:
             print("Admissions data: {}".format(e))
-            residence['admissions'] = None
+            residence['admissions'] = {}
 
         # serveis
         try:
             residence['serveis'] = self.get_servicios_data(html)
         except Exception as e:
             print("Services data: {}".format(e))
-            residence['serveis'] = None
+            residence['serveis'] = {}
 
         # professionales
         try:
             residence['professionals'] = self.get_professionales_data(html)
         except Exception as e:
             print("Professionales data: {}".format(e))
-            residence['professionals'] = None
+            residence['professionals'] = {}
 
         # datos institucion & documentacion
         try:
             residence['institucional'] = self.get_institucional_data(html)
         except Exception as e:
             print("Institucional data: {}".format(e))
-            residence['institucional'] = None
+            residence['institucional'] = {}
 
         # certificaciones
         try:
             residence['certificacions'] = self.get_certificaciones_data(html)
         except Exception as e:
             print("Certificacions data: {}".format(e))
-            residence['certificacions'] = None
+            residence['certificacions'] = {}
 
         return residence
 
@@ -424,14 +432,19 @@ class inforesidencias:
             firstPage = self.session.post(self._REQUEST_URL, data=self.params)
         except:
             return {'status_code': firstPage.status_code, 'message': firstPage.error_message}
+        
         resultregex = r"(\d+(?=\sresultados))"
         parsedPages = re.findall(resultregex, firstPage.text)[0]
         self.totalPages = 1 + (int(parsedPages) // 10)
 
         print(f"Total pages: {self.totalPages}")
 
-        residencies = Parallel(n_jobs=5)(delayed(self.get_paginated_page)(
+        residencies = Parallel(n_jobs=6)(delayed(self.get_paginated_page)(
             page) for page in range(1, self.totalPages))
 
-        self.residencies = list(itertools.chain.from_iterable(residencies))
+        joined_residencies = list(itertools.chain.from_iterable(residencies))
+        normalized_residencies = pd.json_normalize(joined_residencies).set_index(['name', 'url'])
+        normalized_residencies.columns=normalized_residencies.columns.str.split(".",expand=True)
+        self.residencies = normalized_residencies
+        
         return self.residencies
