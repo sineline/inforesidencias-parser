@@ -298,33 +298,69 @@ class inforesidencias:
         html = BeautifulSoup(residence_page.content, "html.parser")
 
         # basic data
-        residence['dades_basiques'] = self.get_residence_basic_data(html)
-
+        try:
+            residence['dades_basiques'] = self.get_residence_basic_data(html)
+        except Exception as e:
+            print(e)
+            residence['dades_basiques'] = None
+            
         # Quality data
-        residence['qualitat'] = self.get_quality_data(html)
-
+        try:
+            residence['qualitat'] = self.get_quality_data(html)
+        except Exception as e:
+            print(e)
+            residence['qualitat'] = None
+            
         # Instalaciones
-        residence['instalacions'] = self.get_facilities_data(html)
-
+        try:
+           residence['instalacions'] = self.get_facilities_data(html)
+        except Exception as e:
+            print(e)
+            residence['instalacions'] = None
+            
         # financiacio
-        residence['financiacio'] = self.get_financiacio_data(html)
-
+        try:
+            residence['financiacio'] = self.get_financiacio_data(html)
+        except Exception as e:
+            print(e)
+            residence['financiacio'] = None
+            
         # admissions
-        residence['admissions'] = self.get_admissions_data(html)
-
+        try:
+            residence['admissions'] = self.get_admissions_data(html)
+        except Exception as e:
+            print(e)
+            residence['admissions'] = None
+            
         # serveis
-        residence['serveis'] = self.get_servicios_data(html)
-
+        try:
+            residence['serveis'] = self.get_servicios_data(html)
+        except Exception as e:
+            print(e)
+            residence['serveis'] = None
+            
         # professionales
-        residence['professionals'] = self.get_professionales_data(html)
-
+        try:
+            residence['professionals'] = self.get_professionales_data(html)
+        except Exception as e:
+            print(e)
+            residence['professionals'] = None 
+            
         # datos institucion & documentacion
-        residence['institucional'] = self.get_institucional_data(html)
-
+        try:
+            residence['institucional'] = self.get_institucional_data(html)
+        except Exception as e:
+            print(e)
+            residence['institucional'] = None
+            
         # certificaciones
-        residence['certificacions'] = self.get_certificaciones_data(html)
-
-        return pd.Series(residence)
+        try:
+            residence['certificacions'] = self.get_certificaciones_data(html)
+        except Exception as e:
+            print(e)
+            residence['certificacions'] = None
+            
+        return residence
 
     def get_paginated_page(self, page_number: int) -> BeautifulSoup:
         """ Obtiene las urls de las residencias de la pagina indicada
@@ -370,4 +406,4 @@ class inforesidencias:
             page) for page in range(1, self.totalPages))
 
         self.residencies = list(itertools.chain.from_iterable(residencies))
-        return self.residencies
+        return  self.residencies 
