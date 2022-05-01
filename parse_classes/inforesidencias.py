@@ -428,8 +428,9 @@ class inforesidencias:
             a = item.find_next('h2').find_next('a')
             items.append({'name': a.text, 'url': self._BASE_URL + a['href']})
 
-        data = Parallel(n_jobs=10)(delayed(self.get_residence_data)(page)
-                                   for page in items)
+        data = []
+        for page in items:
+            data.append(self.get_residence_data(page))
         return data
 
     def get_residencies(self) -> pd.DataFrame:
@@ -449,7 +450,7 @@ class inforesidencias:
 
         print(f"Total pages: {self.totalPages}")
 
-        residencies = Parallel(n_jobs=20)(delayed(self.get_paginated_page)(
+        residencies = Parallel(n_jobs=25)(delayed(self.get_paginated_page)(
             page) for page in range(1, self.totalPages))
 
         joined_residencies = list(itertools.chain.from_iterable(residencies))
